@@ -1,0 +1,21 @@
+# Binaries
+out
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Go build cache
+*.o
+*.a
+
+# IDE
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
