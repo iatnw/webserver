@@ -2,6 +2,6 @@ package main
 
 import "net/http"
 
-func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerReset(_ http.ResponseWriter, _ *http.Request) {
 	cfg.fileserverHits.Store(0)
 }
