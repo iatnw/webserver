@@ -4,7 +4,14 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"regexp"
 )
+
+var profaneWords = map[string]struct{}{
+	"kerfuffle": {},
+	"sharbert":  {},
+	"fornax":    {},
+}
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
@@ -12,7 +19,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		Body string `json:"body"`
 	}
 	type responseBody struct {
-		Valid bool `json:"valid"`
+		CleanedBody string `json:"cleaned_body"`
 	}
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -27,10 +34,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	const maxChirpLength = 140
 	if len(params.Body) > maxChirpLength {
-		respondWithError(w, http.StatusBadRequest, "", err)
+		respondWithError(w, http.StatusBadRequest, "Chirp is too long", nil)
 	} else {
 		respondWithJSON(w, http.StatusOK, responseBody{
-			Valid: true,
+			CleanedBody: replaceProfaneWords(params.Body),
 		})
 	}
+}
+func replaceProfaneWords(originalText string) string {
+	const profaneWordReplacement = "****"
+	resultText := originalText
+	for key := range profaneWords {
+		re := regexp.MustCompile("(?i)" + key)
+		resultText = re.ReplaceAllString(resultText, profaneWordReplacement)
+	}
+	return resultText
 }
