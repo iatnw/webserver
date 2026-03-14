@@ -7,13 +7,9 @@ import (
 	"regexp"
 )
 
-var profaneWords = map[string]struct{}{
-	"kerfuffle": {},
-	"sharbert":  {},
-	"fornax":    {},
-}
+var profaneRe = regexp.MustCompile(`(?i)\b(kerfuffle|sharbert|fornax)\b`)
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	type requestBody struct {
 		Body string `json:"body"`
@@ -42,11 +38,5 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func replaceProfaneWords(originalText string) string {
-	const profaneWordReplacement = "****"
-	resultText := originalText
-	for key := range profaneWords {
-		re := regexp.MustCompile("(?i)" + key)
-		resultText = re.ReplaceAllString(resultText, profaneWordReplacement)
-	}
-	return resultText
+	return profaneRe.ReplaceAllString(originalText, "****")
 }
