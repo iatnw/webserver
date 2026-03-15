@@ -11,7 +11,7 @@ var profaneRe = regexp.MustCompile(`(?i)\b(kerfuffle|sharbert|fornax)\b`)
 
 func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	type requestBody struct {
+	type parameters struct {
 		Body string `json:"body"`
 	}
 	type responseBody struct {
@@ -22,7 +22,7 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, 500, "could not read request", err)
 		return
 	}
-	params := requestBody{}
+	params := parameters{}
 	err = json.Unmarshal(data, &params)
 	if err != nil {
 		respondWithError(w, 500, "could not unmarshal parameters", err)
