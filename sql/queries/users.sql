@@ -5,3 +5,6 @@ insert into users(id, created_at, updated_at, email) values (
     now(),
     $1
 ) returning *;
+
+-- name: DeleteAllUsers :exec
+delete from users;

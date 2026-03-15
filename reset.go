@@ -2,6 +2,18 @@ package main
 
 import "net/http"
 
-func (cfg *apiConfig) handlerReset(_ http.ResponseWriter, _ *http.Request) {
+func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
+	if cfg.platform != "dev" {
+		respondWithError(w, http.StatusForbidden, "Forbidden", nil)
+		return
+	}
+	err := cfg.db.DeleteAllUsers(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not delete users", err)
+		return
+	}
+	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Resetting metrics counter"))
 	cfg.fileserverHits.Store(0)
 }
