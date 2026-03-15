@@ -18,31 +18,35 @@ type User struct {
 
 func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	type requestBody struct {
+	type parameters struct {
 		Email string `json:"email"`
+	}
+	type response struct {
+		User
 	}
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		respondWithError(w, 500, "could not read request", err)
 		return
 	}
-	params := requestBody{}
+	params := parameters{}
 	err = json.Unmarshal(data, &params)
 	if err != nil {
 		respondWithError(w, 500, "could not unmarshal parameters", err)
 		return
 	}
-	dbUser, err := cfg.db.CreateUser(r.Context(), params.Email)
+	user, err := cfg.db.CreateUser(r.Context(), params.Email)
 	if err != nil {
 		respondWithError(w, 500, "could not create user", err)
 		return
 	}
-	respondWithJSON(w, http.StatusCreated,
-		User{
-			Id:        dbUser.ID,
-			CreatedAt: dbUser.CreatedAt,
-			UpdatedAt: dbUser.UpdatedAt,
-			Email:     dbUser.Email,
+	respondWithJSON(w, http.StatusCreated, response{
+		User: User{
+			Id:        user.ID,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+			Email:     user.Email,
 		},
+	},
 	)
 }
