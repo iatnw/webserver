@@ -10,7 +10,7 @@ import (
 )
 
 type User struct {
-	Id        uuid.UUID `json:"id"`
+	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
@@ -32,17 +32,17 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 	params := parameters{}
 	err = json.Unmarshal(data, &params)
 	if err != nil {
-		respondWithError(w, 500, "could not unmarshal parameters", err)
+		respondWithError(w, http.StatusInternalServerError, "could not unmarshal parameters", err)
 		return
 	}
 	user, err := cfg.db.CreateUser(r.Context(), params.Email)
 	if err != nil {
-		respondWithError(w, 500, "could not create user", err)
+		respondWithError(w, http.StatusInternalServerError, "could not create user", err)
 		return
 	}
 	respondWithJSON(w, http.StatusCreated, response{
 		User: User{
-			Id:        user.ID,
+			ID:        user.ID,
 			CreatedAt: user.CreatedAt,
 			UpdatedAt: user.UpdatedAt,
 			Email:     user.Email,
