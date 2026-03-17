@@ -6,9 +6,9 @@ import (
 	"github.com/google/uuid"
 )
 
-func (cfg *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
+func (apiConfig *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
 	chirpID := r.PathValue("chirpID")
-	chirp, err := cfg.db.GetChirp(r.Context(), uuid.MustParse(chirpID))
+	chirp, err := apiConfig.db.GetChirp(r.Context(), uuid.MustParse(chirpID))
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "chirp not found", err)
 		return
@@ -22,15 +22,15 @@ func (cfg *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (cfg *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := cfg.db.ListChirps(r.Context())
+func (apiConfig *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) {
+	dbChirps, err := apiConfig.db.ListChirps(r.Context())
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not list chirps", err)
 		return
 	}
-	listChirps := make([]Chirp, 0, len(chirps))
-	for _, chirp := range chirps {
-		listChirps = append(listChirps, Chirp{
+	chirps := make([]Chirp, 0, len(dbChirps))
+	for _, chirp := range dbChirps {
+		chirps = append(chirps, Chirp{
 			ID:        chirp.ID,
 			CreatedAt: chirp.CreatedAt,
 			UpdatedAt: chirp.UpdatedAt,
@@ -38,5 +38,5 @@ func (cfg *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) 
 			UserID:    chirp.UserID,
 		})
 	}
-	respondWithJSON(w, http.StatusOK, listChirps)
+	respondWithJSON(w, http.StatusOK, chirps)
 }

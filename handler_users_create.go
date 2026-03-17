@@ -4,12 +4,16 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+
+	"webserver/internal/auth"
+	"webserver/internal/database"
 )
 
-func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
+func (apiConfig *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	type parameters struct {
-		Email string `json:"email"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	type response struct {
 		User
@@ -25,17 +29,25 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusInternalServerError, "could not unmarshal parameters", err)
 		return
 	}
-	user, err := cfg.db.CreateUser(r.Context(), params.Email)
+	hashedPassword, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not hash password", err)
+		return
+	}
+	dbUser, err := apiConfig.db.CreateUser(r.Context(), database.CreateUserParams{
+		Email:          params.Email,
+		HashedPassword: hashedPassword,
+	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not create user", err)
 		return
 	}
 	respondWithJSON(w, http.StatusCreated, response{
 		User: User{
-			ID:        user.ID,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
-			Email:     user.Email,
+			ID:        dbUser.ID,
+			CreatedAt: dbUser.CreatedAt,
+			UpdatedAt: dbUser.UpdatedAt,
+			Email:     dbUser.Email,
 		},
 	},
 	)

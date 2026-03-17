@@ -13,7 +13,7 @@ import (
 
 var profaneRe = regexp.MustCompile(`(?i)\b(kerfuffle|sharbert|fornax)\b`)
 
-func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
+func (apiConfig *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	type parameters struct {
 		Body   string    `json:"body"`
@@ -40,7 +40,7 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 	}
 	cleanedBody := replaceProfaneWords(params.Body)
 
-	chirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
+	dbChirp, err := apiConfig.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   cleanedBody,
 		UserID: params.UserID,
 	})
@@ -50,9 +50,9 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 	}
 	respondWithJSON(w, http.StatusCreated, response{
 		Chirp: Chirp{
-			ID:        chirp.ID,
-			CreatedAt: chirp.CreatedAt,
-			UpdatedAt: chirp.UpdatedAt,
+			ID:        dbChirp.ID,
+			CreatedAt: dbChirp.CreatedAt,
+			UpdatedAt: dbChirp.UpdatedAt,
 			Body:      cleanedBody,
 			UserID:    params.UserID,
 		},

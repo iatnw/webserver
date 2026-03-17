@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, _ *http.Request) {
+func (apiConfig *apiConfig) handlerMetrics(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf(`<html>
@@ -13,11 +13,12 @@ func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, _ *http.Request) {
 <h1>Welcome, Chirpy %s</h1>
 <p> Chirpy has been visited %d times!</p>
 </body>
-</html>`, "Admin", cfg.fileserverHits.Load())))
+</html>`, "Admin", apiConfig.fileserverHits.Load())))
 }
-func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
+
+func (apiConfig *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.fileserverHits.Add(1)
+		apiConfig.fileserverHits.Add(1)
 		next.ServeHTTP(w, r)
 	})
 }
