@@ -6,18 +6,28 @@ import (
 	"net/http"
 	"regexp"
 
+	"webserver/internal/auth"
 	"webserver/internal/database"
-
-	"github.com/google/uuid"
 )
 
 var profaneRe = regexp.MustCompile(`(?i)\b(kerfuffle|sharbert|fornax)\b`)
 
 func (apiConfig *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "missing or invalid token", err)
+		return
+	}
+	userID, err := auth.ValidateJWT(token, apiConfig.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "invalid token", err)
+		return
+	}
+
 	type parameters struct {
-		Body   string    `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
 	}
 	type response struct {
 		Chirp
@@ -42,7 +52,7 @@ func (apiConfig *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Re
 
 	dbChirp, err := apiConfig.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   cleanedBody,
-		UserID: params.UserID,
+		UserID: userID,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not create chirp", err)
@@ -54,10 +64,9 @@ func (apiConfig *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Re
 			CreatedAt: dbChirp.CreatedAt,
 			UpdatedAt: dbChirp.UpdatedAt,
 			Body:      cleanedBody,
-			UserID:    params.UserID,
+			UserID:    userID,
 		},
-	},
-	)
+	})
 }
 
 func replaceProfaneWords(originalText string) string {

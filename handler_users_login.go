@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
+	"time"
 
 	"webserver/internal/auth"
 )
@@ -11,11 +13,13 @@ import (
 func (apiConfig *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	type parameters struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email            string `json:"email"`
+		Password         string `json:"password"`
+		ExpiresInSeconds *int   `json:"expires_in_seconds"`
 	}
 	type response struct {
 		User
+		Token string `json:"token"`
 	}
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -37,6 +41,22 @@ func (apiConfig *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusUnauthorized, "Invalid email or password", err)
 		return
 	}
+
+	const maxExpiry = time.Hour
+	expiry := maxExpiry
+	if params.ExpiresInSeconds != nil {
+		requested := time.Duration(*params.ExpiresInSeconds) * time.Second
+		if requested < expiry {
+			expiry = requested
+		}
+	}
+
+	token, err := auth.MakeJWT(user.ID, os.Getenv("JWT_SECRET"), expiry)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not create token", err)
+		return
+	}
+
 	respondWithJSON(w, http.StatusOK, response{
 		User: User{
 			ID:        user.ID,
@@ -44,5 +64,6 @@ func (apiConfig *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request)
 			UpdatedAt: user.UpdatedAt,
 			Email:     user.Email,
 		},
+		Token: token,
 	})
 }
