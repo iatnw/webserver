@@ -2,8 +2,10 @@ package main
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/google/uuid"
+	"webserver/internal/database"
 )
 
 func (apiConfig *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
@@ -23,11 +25,25 @@ func (apiConfig *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Reque
 }
 
 func (apiConfig *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Request) {
-	dbChirps, err := apiConfig.db.ListChirps(r.Context())
+	var dbChirps []database.Chirp
+	var err error
+
+	authorIDStr := r.URL.Query().Get("author_id")
+	if authorIDStr != "" {
+		authorID, parseErr := uuid.Parse(authorIDStr)
+		if parseErr != nil {
+			respondWithError(w, http.StatusBadRequest, "invalid author_id", parseErr)
+			return
+		}
+		dbChirps, err = apiConfig.db.ListChirpsByAuthor(r.Context(), authorID)
+	} else {
+		dbChirps, err = apiConfig.db.ListChirps(r.Context())
+	}
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not list chirps", err)
 		return
 	}
+
 	chirps := make([]Chirp, 0, len(dbChirps))
 	for _, chirp := range dbChirps {
 		chirps = append(chirps, Chirp{
@@ -38,5 +54,12 @@ func (apiConfig *apiConfig) handlerListChirps(w http.ResponseWriter, r *http.Req
 			UserID:    chirp.UserID,
 		})
 	}
+
+	if r.URL.Query().Get("sort") == "desc" {
+		sort.Slice(chirps, func(i, j int) bool {
+			return chirps[i].CreatedAt.After(chirps[j].CreatedAt)
+		})
+	}
+
 	respondWithJSON(w, http.StatusOK, chirps)
 }

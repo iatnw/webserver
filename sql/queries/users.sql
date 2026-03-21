@@ -18,3 +18,8 @@ update users
 set email = $1, hashed_password = $2, updated_at = now()
 where id = $3
 returning *;
+
+-- name: UpgradeUserToChirpyRed :exec
+update users
+set is_chirpy_red = true, updated_at = now()
+where id = $1;
