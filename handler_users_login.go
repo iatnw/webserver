@@ -8,27 +8,28 @@ import (
 	"time"
 
 	"webserver/internal/auth"
+	"webserver/internal/database"
 )
 
 func (apiConfig *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	type parameters struct {
-		Email            string `json:"email"`
-		Password         string `json:"password"`
-		ExpiresInSeconds *int   `json:"expires_in_seconds"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	type response struct {
 		User
-		Token string `json:"token"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		respondWithError(w, http.StatusInternalServerError, "Error reading request body", err)
 		return
 	}
 	var params parameters
 	if err := json.Unmarshal(data, &params); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 	user, err := apiConfig.db.GetUserByEmail(r.Context(), params.Email)
@@ -41,17 +42,19 @@ func (apiConfig *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusUnauthorized, "Invalid email or password", err)
 		return
 	}
-
-	const maxExpiry = time.Hour
-	expiry := maxExpiry
-	if params.ExpiresInSeconds != nil {
-		requested := time.Duration(*params.ExpiresInSeconds) * time.Second
-		if requested < expiry {
-			expiry = requested
-		}
+	refreshToken := auth.MakeRefreshToken()
+	expiresAt60Days := time.Now().AddDate(0, 0, 60)
+	dbRefreshToken, err := apiConfig.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		UserID:    user.ID,
+		ExpiresAt: expiresAt60Days,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not create refresh token", err)
+		return
 	}
 
-	token, err := auth.MakeJWT(user.ID, os.Getenv("JWT_SECRET"), expiry)
+	token, err := auth.MakeJWT(user.ID, os.Getenv("JWT_SECRET"), time.Hour)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not create token", err)
 		return
@@ -64,6 +67,7 @@ func (apiConfig *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request)
 			UpdatedAt: user.UpdatedAt,
 			Email:     user.Email,
 		},
-		Token: token,
+		Token:        token,
+		RefreshToken: dbRefreshToken.Token,
 	})
 }
