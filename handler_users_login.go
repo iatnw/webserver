@@ -32,6 +32,10 @@ func (apiConfig *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
+	if params.Email == "" || params.Password == "" {
+		respondWithError(w, http.StatusBadRequest, "email and password are required", nil)
+		return
+	}
 	user, err := apiConfig.db.GetUserByEmail(r.Context(), params.Email)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Invalid email or password", err)
@@ -42,7 +46,11 @@ func (apiConfig *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusUnauthorized, "Invalid email or password", err)
 		return
 	}
-	refreshToken := auth.MakeRefreshToken()
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not generate refresh token", err)
+		return
+	}
 	expiresAt60Days := time.Now().AddDate(0, 0, 60)
 	dbRefreshToken, err := apiConfig.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
 		Token:     refreshToken,

@@ -27,18 +27,33 @@ func main() {
 
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatalf("Error loading .env file: %v", err)
 	}
 
 	dbURL := os.Getenv("DB_URL")
+	jwtSecret := os.Getenv("JWT_SECRET")
+	polkaKey := os.Getenv("POLKA_KEY")
+
+	if dbURL == "" {
+		log.Fatal("DB_URL environment variable is required")
+	}
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET environment variable is required")
+	}
+	if polkaKey == "" {
+		log.Fatal("POLKA_KEY environment variable is required")
+	}
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		log.Fatal("Error opening database")
+		log.Fatalf("Error opening database: %v", err)
+	}
+	if err = db.Ping(); err != nil {
+		log.Fatalf("Error connecting to database: %v", err)
 	}
 
 	dbQueries := database.New(db)
-	apiCfg := &apiConfig{atomic.Int32{}, dbQueries, os.Getenv("PLATFORM"), os.Getenv("JWT_SECRET"), os.Getenv("POLKA_KEY")}
+	apiCfg := &apiConfig{atomic.Int32{}, dbQueries, os.Getenv("PLATFORM"), jwtSecret, polkaKey}
 
 	mux := http.NewServeMux()
 	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))

@@ -38,6 +38,10 @@ func (apiConfig *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Req
 		respondWithError(w, http.StatusBadRequest, "invalid request body", err)
 		return
 	}
+	if params.Email == "" || params.Password == "" {
+		respondWithError(w, http.StatusBadRequest, "email and password are required", nil)
+		return
+	}
 
 	hashedPassword, err := auth.HashPassword(params.Password)
 	if err != nil {

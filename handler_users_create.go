@@ -29,6 +29,10 @@ func (apiConfig *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Req
 		respondWithError(w, http.StatusInternalServerError, "could not unmarshal parameters", err)
 		return
 	}
+	if params.Email == "" || params.Password == "" {
+		respondWithError(w, http.StatusBadRequest, "email and password are required", nil)
+		return
+	}
 	hashedPassword, err := auth.HashPassword(params.Password)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "could not hash password", err)

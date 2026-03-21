@@ -95,8 +95,10 @@ func GetAPIKey(headers http.Header) (string, error) {
 	return key, nil
 }
 
-func MakeRefreshToken() string {
+func MakeRefreshToken() (string, error) {
 	key := make([]byte, 32)
-	rand.Read(key)
-	return hex.EncodeToString(key)
+	if _, err := rand.Read(key); err != nil {
+		return "", fmt.Errorf("could not generate refresh token: %w", err)
+	}
+	return hex.EncodeToString(key), nil
 }
